@@ -1,4 +1,3 @@
-from multiprocessing import shared_memory
 import random
 import pickle
 import time
@@ -54,6 +53,7 @@ def get_world_size(type='local'):
 
 class barrier_lock(object):
     def __init__(self, n):
+        from multiprocessing import shared_memory
         self.n = n
         id = int(random.random()*10000) + int(time.time())*10000
         self.lock_shmname = 'barrier_lock_{}'.format(id)
@@ -64,6 +64,7 @@ class barrier_lock(object):
         lock_shm.close()
 
     def destroy(self):
+        from multiprocessing import shared_memory
         try:
             lock_shm = shared_memory.SharedMemory(
                 name=self.lock_shmname)
@@ -73,6 +74,7 @@ class barrier_lock(object):
             return
 
     def wait(self, k):
+        from multiprocessing import shared_memory
         lock_shm = shared_memory.SharedMemory(
             name=self.lock_shmname)
         assert lock_shm.buf[k] == 0, 'Two waits on the same id is not allowed.'
@@ -99,6 +101,7 @@ class nodewise_sync_global(object):
         self.id_shmname = 'nodewise_sync_id_shm_{}'.format(id)
 
     def destroy(self):
+        from multiprocessing import shared_memory
         self.b_lock.destroy()
         try:
             shm = shared_memory.SharedMemory(name=self.id_shmname)
@@ -123,6 +126,7 @@ class nodewise_sync(object):
         return self
 
     def local_init(self):
+        from multiprocessing import shared_memory
         self.ddp = is_ddp()
         self.global_rank, self.local_rank, self.node_rank = get_rank('all')
         self.global_world_size, self.local_world_size, self.nodes = get_world_size('all')
@@ -135,6 +139,7 @@ class nodewise_sync(object):
         return self
 
     def random_sync_id(self):
+        from multiprocessing import shared_memory
         assert self.local_rank is not None, 'Not initialized!'
         if self.local_rank == 0:
             sync_id = int(random.random()*10000) + int(time.time())*10000

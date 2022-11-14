@@ -13,7 +13,6 @@ from ...cfg_holder import cfg_unique_holder as cfguh
 from ...log_service import print_log
 
 import torch.distributed as dist
-from multiprocessing import shared_memory
 import pickle
 import hashlib
 import random
@@ -101,6 +100,7 @@ class ds_base(torch.utils.data.Dataset):
         return len(self.load_info)*self.repeat
 
     def __cache__(self, pct):
+        from multiprocessing import shared_memory
         if pct == 0:
             self.cache_cnt = 0
             return
@@ -126,6 +126,7 @@ class ds_base(torch.utils.data.Dataset):
         dist.barrier()
 
     def __getitem__(self, idx):
+        from multiprocessing import shared_memory
         idx = idx%len(self.load_info)
         # element = copy.deepcopy(self.load_info[idx])
 

@@ -240,9 +240,6 @@ class eval(eval_base):
         if cfg.env.cuda:
             net.to(self.local_rank)
             load_state_dict(net, cfg.eval) #<--- added
-            net = torch.nn.parallel.DistributedDataParallel(
-                net, device_ids=[self.local_rank], 
-                find_unused_parameters=True)
         net.eval()
         return {'net' : net,}
 

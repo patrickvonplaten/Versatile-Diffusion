@@ -363,10 +363,8 @@ class eval_stage(object):
         self.evaluator = None
 
     def create_dir(self, path):
-        local_rank = sync.get_rank('local')
-        if (not osp.isdir(path)) and (local_rank == 0):
+        if not osp.isdir(path):
             os.makedirs(path)
-        sync.nodewise_sync().barrier()
 
     def __call__(self, 
                  evalloader,
@@ -426,7 +424,7 @@ class exec_container(object):
         self.global_rank = None
         self.local_world_size = None
         self.global_world_size = None
-        self.nodewise_sync_global_obj = sync.nodewise_sync_global()
+        # self.nodewise_sync_global_obj = sync.nodewise_sync_global()
 
     def register_stage(self, stage):
         self.registered_stages.append(stage)
@@ -437,22 +435,23 @@ class exec_container(object):
         cfg = self.cfg
         cfguh().save_cfg(cfg)
 
-        self.node_rank = cfg.env.node_rank
-        self.local_rank = local_rank
-        self.nodes = cfg.env.nodes
-        self.local_world_size = cfg.env.gpu_count
+#        self.node_rank = cfg.env.node_rank
+#        self.local_rank = local_rank
+#        self.nodes = cfg.env.nodes
+#        self.local_world_size = cfg.env.gpu_count
+#
+#        self.global_rank = self.local_rank + self.node_rank * self.nodes
+#        self.global_world_size = self.nodes * self.local_world_size
+#
+#        dist.init_process_group(
+#            backend = cfg.env.dist_backend,
+#            init_method = cfg.env.dist_url,
+#            rank = self.global_rank,
+#            world_size = self.global_world_size,)
+#        torch.cuda.set_device(local_rank)
+        # sync.nodewise_sync().copy_global(self.nodewise_sync_global_obj).local_init()
 
-        self.global_rank = self.local_rank + self.node_rank * self.nodes
-        self.global_world_size = self.nodes * self.local_world_size
-
-        dist.init_process_group(
-            backend = cfg.env.dist_backend,
-            init_method = cfg.env.dist_url,
-            rank = self.global_rank,
-            world_size = self.global_world_size,)
-        torch.cuda.set_device(local_rank)
-        sync.nodewise_sync().copy_global(self.nodewise_sync_global_obj).local_init()
-        
+        self.global_rank = 0
         if isinstance(cfg.env.rnd_seed, int):
             np.random.seed(cfg.env.rnd_seed + self.global_rank)
             torch.manual_seed(cfg.env.rnd_seed + self.global_rank)
@@ -473,12 +472,12 @@ class exec_container(object):
             if stage_para is not None:
                 para.update(stage_para)
 
-        if self.global_rank==0:
-            self.save_last_model(**para)
-
-        print_log(
-            'Total {:.2f} seconds'.format(timeit.default_timer() - time_start))
-        dist.destroy_process_group()
+#        if self.global_rank==0:
+#            self.save_last_model(**para)
+#
+#        print_log(
+#            'Total {:.2f} seconds'.format(timeit.default_timer() - time_start))
+        # dist.destroy_process_group()
 
     def prepare_dataloader(self):
         """

@@ -157,6 +157,8 @@ class eval_stage(eval_stage_base):
         if otype == 'image':
             h, w = image_output_dim
             shape = [n_samples, 4, h//8, w//8]
+            # TODO(Anton) - could you try to replicate the forward pass of this model in diffusers?
+            import ipdb; ipdb.set_trace()
             rv = sampler.sample(
                 steps=ddim_steps,
                 shape=shape,
@@ -166,6 +168,7 @@ class eval_stage(eval_stage_base):
                 xtype=otype, ctype=ctype,
                 eta=ddim_eta,
                 verbose=False,)
+            #################
         elif otype == 'text':
             n = text_latent_dim
             shape = [n_samples, n]
@@ -412,7 +415,7 @@ class eval_stage_dc(eval_stage_base):
     def sample(
             self, net, sampler, conditioning, output_dim, 
             scale, n_samples, ddim_steps, ddim_eta):
-        ctype, cvalue =conditioning
+        ctype, cvalue = conditioning
         if ctype == 'prompt':
             return self.sample_text(
                 net, sampler, cvalue, output_dim,
@@ -492,9 +495,11 @@ class eval_stage_dc(eval_stage_base):
         else:
             netm = net
 
+        netm.to("cuda")
+
         with_ema = getattr(netm, 'model_ema', None) is not None
         sampler = self.sampler(netm)
-        setattr(netm, 'device', LRANK) # Trick
+        # setattr(netm, 'device', LRANK) # Trick
 
         color_adj = cfguh().cfg.eval.get('color_adj', False)
         color_adj_keep_ratio = cfguh().cfg.eval.get('color_adj_keep_ratio', 0.5)
@@ -504,6 +509,8 @@ class eval_stage_dc(eval_stage_base):
         conditioning = cfgv.conditioning * replicate
         conditioning_local = conditioning[LRANK : len(conditioning) : LWSIZE]
         seed_increment = [i for i in range(len(conditioning))][LRANK : len(conditioning) : LWSIZE]
+
+        cfgv.sample["n_samples"] = 1
 
         for ci, seedi in zip(conditioning_local, seed_increment):
             if ci == 'SKIP':
@@ -531,7 +538,9 @@ class eval_stage_dc(eval_stage_base):
                 with netm.ema_scope():
                     x, _ = self.sample(netm, sampler, ci, **cfgv.sample)
             else:
+                # TODO(Anton)
                 x, _ = self.sample(netm, sampler, ci, **cfgv.sample)
+                # 
 
             demo_image = latent2im(netm, x)
             if color_adj and ci[0] == 'vision':
